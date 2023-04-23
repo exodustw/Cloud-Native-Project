@@ -1,0 +1,152 @@
+doctype html
+head
+  meta(charset='UTF-8')
+  meta(name='viewport' content='width=device-width, initial-scale=1.0')
+  meta(http-equiv='X-UA-Compatible' content='ie=edge')
+  style.
+    .swal-modal {
+    text-align: center;
+    }
+  link(href='https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css' rel='stylesheet' integrity='sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC' crossorigin='anonymous')
+  script(src='http://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js')
+  script(src='https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js' integrity='sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM' crossorigin='anonymous')
+  script(src='https://unpkg.com/sweetalert/dist/sweetalert.min.js')
+  script(src='https://static.line-scdn.net/liff/edge/2/sdk.js')
+  style.
+    .swal-modal .swal-text {
+    text-align: center;
+    }
+  title &#x60A8;&#x76EE;&#x524D;&#x7684;&#x4F4D;&#x7F6E;
+//
+  <div id="main">1234</div>
+  <div id="mainly">213</div>
+div(style='display: flex;justify-content: start;  align-items: center;')
+  button(onclick='getLocation()')
+    img(src='https://i.imgur.com/SdCc8af.png' width='99%')
+script.
+  const liffID = '1656610274-9VVp2l8b';
+  //const liffID = '1656561747-D65GydQn';
+  var apiUrl = 'https://turing.exodus.tw/linefresh_api/nextspot.php?uid=';
+  var successAPI = 'https://turing.exodus.tw/linefresh_api/markspot.php?uid=' ;
+  var m = "";
+  var d = "";
+  var nlat = 1.0 ;
+  var nlng = 1.0 ;
+  var nname = "" ;
+  var uid = "" ;
+  var spotid = "" ;
+  liff.init({
+  liffId: liffID
+  }).then(function() {
+  console.log('LIFF init');
+  }).catch(function(error) {
+  console.log(error);
+  });
+  liff.getProfile().then(function (profile) {
+  apiUrl =  apiUrl + profile.userId ;
+  uid = profile.userId;
+  fetch(apiUrl).then(response => {
+  return response.json();
+  }).then(data => {
+  // window.alert(data.name)
+  nname = nname + data.name ;
+  spotid = data.id ;
+  nlat = parseFloat(data.lat) ;
+  nlng = parseFloat(data.lng) ;
+  })
+  .catch(err => {
+  window.alert(err);
+  // Do something for an error here
+  });
+  // const name = profile.displayName;
+  }).catch(function (error) {
+  console.log('error', err);
+  });
+  function getLocation() {//取得 經緯度
+  if (navigator.geolocation) {//
+  navigator.geolocation.getCurrentPosition(showPosition);//有拿到位置就呼叫 showPosition 函式
+  } else {
+  m.innerHTML = "您的瀏覽器不支援 顯示地理位置 API ，請使用其它瀏覽器開啟 這個網址";
+  }
+  }
+  function showPosition(position) {
+  m = "您目前所在地座標\n 緯度 (Latitude):   " +  Math.round((position.coords.latitude + Number.EPSILON) * 10000 ) / 10000 +
+  "\n 經度 (Longitude): " + Math.round((position.coords.longitude + Number.EPSILON) * 10000 ) / 10000 ;
+  // liff.sendMessages([{
+  // type: 'text',
+  // text: nname
+  // }]).catch(function (error) {
+  //     window.alert("Error sending message: " + error);
+  // });
+  mind = distance(position.coords.latitude,position.coords.longitude,nlat,nlng,"K");
+  // mind = distance(24.7834,120.9961,position.coords.latitude,position.coords.longitude,"K");
+  d = "\n距離你的下個目標觀光景點:\n[  "+ nname + "  ]   \n距離 : " + Math.round((mind + Number.EPSILON) * 10000 ) / 10 + "公尺" ;
+  if(mind <= 0.15 ){
+    swal("集點成功", "景點: "+ nname , "success")
+    .then((value) => {
+      var request = new XMLHttpRequest();
+      // Open a new connection, using the GET request on the URL endpoint
+      request.open('GET', successAPI+uid+'&spot='+spotid+'&lat='+position.coords.latitude+'&lng='+position.coords.longitude ,false );
+      request.send(null);
+      liff.sendMessages([{
+      type: 'text',
+      text: " --- 集點成功 --- " + "\x0a" + "景點: "+ nname
+      }]).catch(function (error) {
+      window.alert("Error sending message: " + error);
+      });
+      liff.closeWindow();
+    });
+  }
+  else{
+  swal("距離超過150公尺，集點失敗", "\x0a"+m+"\n"+d , "error")
+  .then((value) => {
+      liff.sendMessages([{
+      type: 'text',
+      text: " --- 集點失敗 --- " + "\x0a" + m + "\n" + d
+      }]).catch(function (error) {
+      window.alert("Error sending message: " + error);
+      });
+      liff.closeWindow();
+    });
+  }
+  }
+  function distance(lat1, lon1, lat2, lon2, unit) {
+  if ((lat1 == lat2) && (lon1 == lon2)) {
+  return 0;
+  }
+  else {
+  var radlat1 = Math.PI * lat1/180;
+  var radlat2 = Math.PI * lat2/180;
+  var theta = lon1-lon2;
+  var radtheta = Math.PI * theta/180;
+  var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+  if (dist > 1) {
+  dist = 1;
+  }
+  dist = Math.acos(dist);
+  dist = dist * 180/Math.PI;
+  dist = dist * 60 * 1.1515;
+  if (unit=="K") { dist = dist * 1.609344 }
+  if (unit=="N") { dist = dist * 0.8684 }
+  return dist;
+  }
+  }
+  // liff.sendMessages([{
+  // type: 'text',
+  // text: "去你媽的"
+  // }]).then(function () {
+  //     window.alert("Message sent");
+  // }).catch(function (error) {
+  //     window.alert("Error sending message: " + error);
+  // });
+  // LIFF SDK 的版本
+  liff.getVersion();
+  // 回傳是否由 LINE App 存取
+  liff.isInClient();
+  // 使用者是否登入 LINE 帳號
+  liff.isLoggedIn();
+  // 回傳使用者作業系統：ios、android、web
+  liff.getOS();
+  // 使用者的 LINE 版本
+  liff.getLineVersion();
+// <hr>
